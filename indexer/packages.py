@@ -155,7 +155,7 @@ class PackageIndexer:
 
         shards_per_day = math.ceil(len(rows) / num_of_days)
 
-        start_idx = (3 - 1) * shards_per_day
+        start_idx = (now.day - 1) * shards_per_day
         end_idx = start_idx + shards_per_day
 
         if start_idx >= row_count:
