@@ -185,7 +185,7 @@ class PackageIndexer:
         candidates_packages = cursor.fetchall()
 
         if len(candidates_packages) == 0:
-            return []
+            return {'current_page': current_page, 'has_more': False, 'packages': []}
 
         markers = ("?," * len(candidates_packages))[0:-1]
         candidate_names = [candidate[0] for candidate in candidates_packages]
@@ -225,7 +225,6 @@ class PackageIndexer:
 
         try:
 
-            asyncio.get_event_loop()
             loop = asyncio.get_event_loop()
             packages_with_meta = loop.run_until_complete(PackageManager._get_metadata(packages_without_metadata))
 
