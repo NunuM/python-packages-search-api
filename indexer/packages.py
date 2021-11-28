@@ -28,7 +28,7 @@ HEADERS = {
 }
 
 
-class PackageManager:
+class PackageIndexer:
 
     def __init__(self, connection_string):
         """
