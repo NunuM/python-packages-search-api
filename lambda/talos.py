@@ -13,7 +13,7 @@ def main(context):
     query_params = context.get_request_query_params()
 
     if 'q' in query_params:
-        q = query_params['q'][0]
+        query = query_params['q'][0]
 
     if 'p' in query_params and query_params['p'][0].isdigit():
         page = int(query_params['p'][0])
