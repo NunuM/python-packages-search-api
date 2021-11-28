@@ -34,7 +34,7 @@ class PackageIndexer:
         """
         :param str connection_string:
         """
-        self.con = sqlite3.connect(connection_string)
+        self._con = sqlite3.connect(connection_string)
         self._create_tables()
 
     def _create_tables(self):
@@ -42,7 +42,7 @@ class PackageIndexer:
         Create tables and indices if not exists
         :return: bool
         """
-        self.con.execute("""
+        self._con.execute("""
             CREATE TABLE IF NOT EXISTS packages (
                 name TEXT, 
                 description TEXT,
@@ -54,12 +54,12 @@ class PackageIndexer:
             );
         """)
 
-        self.con.execute("CREATE INDEX IF NOT EXISTS idx_stars on packages(stars)")
-        self.con.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_package_name on packages(name)")
+        self._con.execute("CREATE INDEX IF NOT EXISTS idx_stars on packages(stars)")
+        self._con.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_package_name on packages(name)")
 
-        self.con.execute("CREATE VIRTUAL TABLE IF NOT EXISTS names USING fts5(name)")
+        self._con.execute("CREATE VIRTUAL TABLE IF NOT EXISTS names USING fts5(name)")
 
-        self.con.execute("CREATE TABLE IF NOT EXISTS state (letter TEXT, hash TEXT )")
+        self._con.execute("CREATE TABLE IF NOT EXISTS state (letter TEXT, hash TEXT )")
 
         # self._bootstrap_packages_names()
 
@@ -99,7 +99,7 @@ class PackageIndexer:
 
                 response_hashes[previous_key]['hash'] = items_hashed
 
-                rows = self.con.execute("SELECT * FROM state WHERE letter=? LIMIT 1", (previous_key,)).fetchall()
+                rows = self._con.execute("SELECT * FROM state WHERE letter=? LIMIT 1", (previous_key,)).fetchall()
                 list_hash = None
 
                 if len(rows) == 1:
@@ -108,19 +108,19 @@ class PackageIndexer:
                 if list_hash is None or list_hash != items_hashed:
                     for item in response_hashes[previous_key]['items']:
                         if list_hash is None or len(
-                                self.con.execute("SELECT * FROM names WHERE name=?", (item,)).fetchall()) == 0:
+                                self._con.execute("SELECT * FROM names WHERE name=?", (item,)).fetchall()) == 0:
                             packages.append((item,))
 
                     if len(packages) > 0:
-                        self.con.executemany("""INSERT INTO names (name) VALUES (?)""", packages)
+                        self._con.executemany("""INSERT INTO names (name) VALUES (?)""", packages)
 
                         if list_hash is None:
-                            self.con.execute("INSERT INTO state (letter, hash) VALUES (?,?)",
-                                             (previous_key, items_hashed))
+                            self._con.execute("INSERT INTO state (letter, hash) VALUES (?,?)",
+                                              (previous_key, items_hashed))
                         else:
-                            self.con.execute("UPDATE state SET hash=? WHERE letter=?", (items_hashed, previous_key))
+                            self._con.execute("UPDATE state SET hash=? WHERE letter=?", (items_hashed, previous_key))
 
-                        self.con.commit()
+                        self._con.commit()
 
                         packages.clear()
 
@@ -143,7 +143,7 @@ class PackageIndexer:
         """
         now = datetime.datetime.now()
 
-        cursor = self.con.execute("SELECT letter FROM state ORDER BY letter")
+        cursor = self._con.execute("SELECT letter FROM state ORDER BY letter")
 
         rows = cursor.fetchall()
         row_count = len(rows)
@@ -179,8 +179,8 @@ class PackageIndexer:
         """
         current_page = abs(page)
         now = round(time.time())
-        cursor = self.con.execute("SELECT * FROM names WHERE name MATCH ? ORDER BY rank LIMIT ? OFFSET ?",
-                                  ("\"{}\"".format(package_name), ROWS_PER_PAGE, ROWS_PER_PAGE * current_page))
+        cursor = self._con.execute("SELECT * FROM names WHERE name MATCH ? ORDER BY rank LIMIT ? OFFSET ?",
+                                   ("\"{}\"".format(package_name), ROWS_PER_PAGE, ROWS_PER_PAGE * current_page))
 
         candidates_packages = cursor.fetchall()
 
@@ -195,7 +195,7 @@ class PackageIndexer:
         for candidate in candidates_packages:
             search_params = search_params + candidate
 
-        packages_metadata = self.con.execute(
+        packages_metadata = self._con.execute(
             "SELECT * FROM packages WHERE name IN ({}) ORDER BY stars DESC".format(markers), search_params)
 
         result_from_db = packages_metadata.fetchall()
@@ -229,7 +229,7 @@ class PackageIndexer:
             loop = asyncio.get_event_loop()
             packages_with_meta = loop.run_until_complete(PackageManager._get_metadata(packages_without_metadata))
 
-            self.insert_packages_metadata(packages_with_meta)
+            self._insert_packages_metadata(packages_with_meta)
 
             result += packages_with_meta
         except:
@@ -242,7 +242,7 @@ class PackageIndexer:
 
         return {'current_page': current_page, 'has_more': len(result) == ROWS_PER_PAGE, 'packages': result}
 
-    def insert_packages_metadata(self, packages):
+    def _insert_packages_metadata(self, packages):
         """
         Insert metadata about the packages. First try in batch,
         On UNIQUE error, it tries to insert one by one
@@ -264,20 +264,20 @@ class PackageIndexer:
                 now))
 
         try:
-            self.con.executemany(query, tuples)
-            self.con.commit()
+            self._con.executemany(query, tuples)
+            self._con.commit()
             return True
         except:
             LOGGER.exception("Metadata batch insert error")
 
         for item in tuples:
             try:
-                self.con.execute(query, item)
-                self.con.commit()
+                self._con.execute(query, item)
+                self._con.commit()
             except:
-                self.con.execute("UPDATE packages SET version=?, stars=?, updated=? WHERE name=?",
-                                 (item[4], item[5], item[6], item[0]))
-                self.con.commit()
+                self._con.execute("UPDATE packages SET version=?, stars=?, updated=? WHERE name=?",
+                                  (item[4], item[5], item[6], item[0]))
+                self._con.commit()
 
         return True
 
