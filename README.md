@@ -1,7 +1,7 @@
 # Python Packages Search Api
 
 
-With search python packages REST API you can find your package by name ordered by relevance. The data comes from PiPy (pip) and it's updated every day. As you might know, PyPy XMLRPC search API was disabled, now, we offer you this alternative. 
+With search python packages REST API you can find your package by name ordered by relevance. The data comes from PyPi (pip) and it's updated every day. As you might know, PyPi XMLRPC search API was disabled, now, we offer you this alternative. 
 
 ### Indexer
 
